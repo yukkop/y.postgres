@@ -7,10 +7,20 @@ services:
     restart: always
     environment:
       POSTGRES_PASSWORD: postgres
+      logging_collector: "on"
+      log_destination: "stderr"
+      log_statement: "all"
     ports:
       - 5433:5432
     volumes:
       - pg_data:/var/lib/postgresql/data
+      - pg_logs:/var/log/postgresql
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "10"
 
 volumes:
   pg_data: {}
+  pg_logs: {}
