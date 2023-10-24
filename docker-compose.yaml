@@ -6,7 +6,7 @@ services:
     image: postgres:15.4
     restart: always
     environment:
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: SZzhHW2M1MJTFWh1
       logging_collector: "on"
       log_destination: "stderr"
       log_statement: "all"
