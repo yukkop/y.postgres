@@ -20,8 +20,8 @@ This repository contains a Docker Compose file for a straightforward installatio
    cd <repo-directory>
    ```
 
-2. **Configure Postgres Data Path** *(Optional)*:
-   - Run `passge.sh` to set a custom path for PostgreSQL data storage.
+2. **Configure Postgres Data Password** *(Optional)*:
+   - Run `passge.sh` to set a custom password for PostgreSQL data storage.
      ```shell
      bash ./passge.sh
      ```
@@ -36,10 +36,26 @@ This repository contains a Docker Compose file for a straightforward installatio
 
      it will change password in docker compose file and write it for you
 
-3. **Environment Variables**:
+3. **Configure Postgres Data Port** *(Optional)*:
+   - Run `passge.sh` to set a custom port for PostgreSQL data storage.
+     ```shell
+     bash ./portge.sh
+     ```
+     or
+     ```shell
+     sh ./portge.sh
+     ```
+     or 
+     ```shell
+     chmod 555 ./portge.sh; ./portge.sh
+     ```
+
+     it will change password in docker compose file and write it for you
+
+4. **Environment Variables**:
    - Modify the `.env` file to set your desired environment variables.
 
-4. **Running PostgreSQL**:
+5. **Running PostgreSQL**:
    - Use `usenv.sh` to apply the `.env` file and start PostgreSQL:
      ```shell
      docker-compose up -d
