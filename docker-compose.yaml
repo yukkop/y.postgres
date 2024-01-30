@@ -11,7 +11,7 @@ services:
       log_destination: "stderr"
       log_statement: "all"
     ports:
-      - 5433:5432
+      - 49152:5432
     volumes:
       - pg_data:/var/lib/postgresql/data
       - pg_logs:/var/log/postgresql
