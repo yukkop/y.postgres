@@ -23,8 +23,18 @@ This repository contains a Docker Compose file for a straightforward installatio
 2. **Configure Postgres Data Path** *(Optional)*:
    - Run `passge.sh` to set a custom path for PostgreSQL data storage.
      ```shell
-     ./passge.sh <new-path>
+     bash ./passge.sh
      ```
+     or
+     ```shell
+     sh ./passge.sh
+     ```
+     or 
+     ```shell
+     chmod 555 ./passge.sh; ./passge.sh
+     ```
+
+     it will change password in docker compose file and write it for you
 
 3. **Environment Variables**:
    - Modify the `.env` file to set your desired environment variables.

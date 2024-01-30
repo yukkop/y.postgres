@@ -1,5 +1,14 @@
 #!/bin/sh
 
+# Display help information
+if [ "$1" = '-h' ] || [ "$1" = '--help' ] || [ "$1" = 'help' ]; then
+  echo "Usage: $(basename "$0") [OPTION]"
+  echo "Options:"
+  echo "  -b, --build, --rebuild  Build or rebuild the container"
+  echo "  --help                  Display this help and exit"
+  exit 0
+fi
+
 if [ "$1" = '-b' ] || [ "$1" = '--build' ] || [ "$1" = '--rebuild' ]; then
   build=1
 fi
