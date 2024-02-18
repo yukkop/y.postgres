@@ -26,6 +26,11 @@ done
 if [ "${HELP}" ]; then
   printf 'Usage: %s [NEW_PORT (optional)]\n' "$(basename "$0")"
   printf '  Change the port in the port forwarding of the db service in docker-compose.yml or docker-compose.yaml\n'
+  printf ''
+  printf 'Options:\n'
+  printf '  -q, --quiet		  return only result\n'
+  printf '  -b, --build, --rebuild  Build or rebuild the container\n'
+  printf '  -h, --help              Display this help and exit\n'
   exit 0
 fi
 
