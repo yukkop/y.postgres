@@ -1,9 +1,31 @@
 #!/bin/sh
 
+while [ "$#" -gt 0 ]; do
+  case $1 in 
+    -h|--help|help)
+      HELP=1
+      ;;                                   
+    -q|--quiet)
+      QUIET=1
+      ;;                 
+    -b|--build|--rebuild)
+      BUILD=1
+      ;;
+    -*)
+      echo "Error: Unsupported flag $1" >&2
+      return 1
+      ;;                                  
+    *)  # No more options                          
+      break
+      ;;                                                                                                  
+  esac
+  shift                     
+done
+
 # Display help information
-if [ "$1" = '-h' ] || [ "$1" = '--help' ] || [ "$1" = 'help' ]; then
-	echo "Usage: $(basename "$0") [NEW_PORT (optional)]"
-  echo "Change the port in the port forwarding of the db service in docker-compose.yml or docker-compose.yaml"
+if [ "${HELP}" ]; then
+  printf 'Usage: %s [NEW_PORT (optional)]\n' "$(basename "$0")"
+  printf '  Change the port in the port forwarding of the db service in docker-compose.yml or docker-compose.yaml\n'
   exit 0
 fi
 
@@ -24,7 +46,9 @@ find_free_port() {
 new_port="$1"
 
 if [ -z "${new_port}" ]; then
-  echo "finding free port..."
+  if [ ! "${QUIET}" ]; then
+    printf 'finding free port...\n'
+  fi
   new_port=$(find_free_port)
 else
 
@@ -54,4 +78,13 @@ fi
 # Update the port forwarding
 sed -i "s/- .*:5432/- ${new_port}:5432/" "${filename}"
 
-echo "Updated db service port to ${new_port} in ${filename}"
+if [ "${QUIET}" ]; then
+  printf '%s' "${new_port}"
+else
+  printf 'Updated db service port to %s in %s\n' "${new_port}" "${filename}"
+  if [ -z "${build}" ]; then
+    printf 'Will take effect after container rebuild\n'
+  else
+    sudo docker compose up --build -d	
+  fi
+fi

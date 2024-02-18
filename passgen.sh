@@ -1,15 +1,38 @@
 #!/bin/sh
 
+while [ "$#" -gt 0 ]; do
+  case $1 in 
+    -h|--help|help)
+      HELP=1
+      ;;                                   
+    -q|--quiet)
+      QUIET=1
+      ;;                 
+    -b|--build|--rebuild)
+      BUILD=1
+      ;;
+    -*)
+      echo "Error: Unsupported flag $1" >&2
+      return 1
+      ;;                                  
+    *)  # No more options                          
+      break
+      ;;                                                                                                  
+  esac
+  shift                     
+done
+
 # Display help information
-if [ "$1" = '-h' ] || [ "$1" = '--help' ] || [ "$1" = 'help' ]; then
-  echo "Usage: $(basename "$0") [OPTION]"
-  echo "Options:"
-  echo "  -b, --build, --rebuild  Build or rebuild the container"
-  echo "  --help                  Display this help and exit"
+if [ "$HELP" ]; then
+  printf 'Usage: $(basename "$0") [OPTION]\n'
+  printf 'Options:\n'
+  printf '  -q, --quiet		  return only result\n'
+  printf '  -b, --build, --rebuild  Build or rebuild the container\n'
+  printf '  -h, --help              Display this help and exit\n'
   exit 0
 fi
 
-if [ "$1" = '-b' ] || [ "$1" = '--build' ] || [ "$1" = '--rebuild' ]; then
+if [ "$BUILD" ]; then
   build=1
 fi
 
@@ -32,9 +55,13 @@ fi
 # Update POSTGRES_PASSWORD in docker-compose.yml
 sed -i "s/POSTGRES_PASSWORD: .*/POSTGRES_PASSWORD: $password/" "${filename}"
 
-echo "Updated POSTGRES_PASSWORD to $password in ${filename}"
-if [ -z "${build}" ]; then
-  echo "Will take effect after container rebuild"
+if [ "${QUIET}" ]; then
+  printf '%s' "${password}"
 else
-  sudo docker compose up --build -d	
+  printf 'Updated POSTGRES_PASSWORD to %s in %s\n' "${password}" "${filename}"
+  if [ -z "${build}" ]; then
+    printf 'Will take effect after container rebuild\n'
+  else
+    sudo docker compose up --build -d	
+  fi
 fi
