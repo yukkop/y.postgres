@@ -8,6 +8,10 @@ This repository contains a Docker Compose file for a straightforward installatio
 - `passge.sh`: Script to change the default path in `docker-compose.yaml` for PostgreSQL data storage.
 - `usenv.sh`: Utility that reads and applies the `.env` file for the next command.
 
+## Dependencies
+- `docker`
+- `docker-compose`
+
 ## Prerequisites
 
 - Docker and Docker Compose installed on your system.
