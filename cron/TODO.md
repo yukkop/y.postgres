@@ -1,0 +1,2 @@
+- [ ] backup.sh output to Docker logs
+- [ ] backup.sh add logining

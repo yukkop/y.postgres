@@ -1,0 +1,19 @@
+version: '3.1'
+
+services:
+  myservice:
+    image: backup-sheduler
+    build: .
+    restart: always
+    environment:
+      - TZ=Europe/Rome 
+    volumes:
+      - pg_backups:/var/lib/postgresql/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "10"
+
+volumes:
+  pg_backups: {}
