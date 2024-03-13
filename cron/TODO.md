@@ -1,2 +1,5 @@
 - [ ] backup.sh output to Docker logs
 - [ ] backup.sh add logining
+- [ ] passgen.sh include changes in cron/.env
+- [ ] portgen.sh include changes in cron/.env
+- [ ] thinking: cron/.env have db access, maybe it is not secure, maybe need delete after docker container started
