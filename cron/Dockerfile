@@ -1,6 +1,6 @@
 FROM alpine:latest
 
-RUN apk add --no-cache cronie
+RUN apk add --no-cache cronie postgresql-client
 
 ADD crontab /etc/crontabs/root
 ADD backup.sh /root
