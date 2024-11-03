@@ -8,7 +8,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     environment:
-      POSTGRES_PASSWORD: PxH2Z5zY35FFfXVu
+      POSTGRES_PASSWORD: MHcMsSPxubWWsuBx
       logging_collector: "on"
       log_destination: "stderr"
       log_statement: "all"
