@@ -3,7 +3,9 @@ version: '3.1'
 services:
 
   db:
-    image: postgres:15.4
+    build:
+      context: .
+      dockerfile: Dockerfile
     restart: always
     environment:
       POSTGRES_PASSWORD: PxH2Z5zY35FFfXVu
@@ -11,7 +13,7 @@ services:
       log_destination: "stderr"
       log_statement: "all"
     ports:
-      - 49152:5432
+      - 49153:5432
     volumes:
       - pg_data:/var/lib/postgresql/data
       - pg_logs:/var/log/postgresql
