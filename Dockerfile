@@ -50,8 +50,12 @@ RUN apt-get remove -y git && \
 #ADD ./initdb.sql /docker-entrypoint-initdb.d/
 
 ADD ./postgresql.conf /etc/postgresql/postgresql.conf
-RUN chown 999:999 /etc/postgresql/postgresql.conf
-RUN chmod 644 /etc/postgresql/postgresql.conf
+RUN chown 999:999 /etc/postgresql/postgresql.conf 
+  && chmod 644 /etc/postgresql/postgresql.conf
+
+ADD ./allowed_dependencies.toml /etc/postgresql/allowed_dependencies.toml
+RUN chown 999:999 /etc/postgresql/allowed_dependencies.toml 
+  && chmod 644 /etc/postgresql/allowed_dependencies.toml
 
 # Expose the PostgreSQL port
 EXPOSE 5432
