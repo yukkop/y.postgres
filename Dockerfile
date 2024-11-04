@@ -30,6 +30,8 @@ RUN . "$HOME/.cargo/env" && \
   rustup default 1.72.0 && \
   rustup component add rustc-dev
 
+ENV PATH="/var/lib/postgresql/.cargo/bin:${PATH}"
+
 # Switch back to root to clean up
 USER root
 
@@ -46,6 +48,10 @@ RUN apt-get remove -y git && \
 
 # Copy initialization scripts, if any
 #ADD ./initdb.sql /docker-entrypoint-initdb.d/
+
+ADD ./postgresql.conf /etc/postgresql/postgresql.conf
+RUN chown 999:999 /etc/postgresql/postgresql.conf
+RUN chmod 644 /etc/postgresql/postgresql.conf
 
 # Expose the PostgreSQL port
 EXPOSE 5432

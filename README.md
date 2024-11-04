@@ -1,3 +1,8 @@
+changes in postgresql config for plrust only
+```ignore
+shared_preload_libraries = 'plrust'
+plrust.work_dir = '/tmp'
+```
 # Postgres-15 Docker Compose Setup
 
 This repository contains a Docker Compose file for a straightforward installation of PostgreSQL 15, along with utility scripts for managing the setup.

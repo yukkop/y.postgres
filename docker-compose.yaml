@@ -12,6 +12,8 @@ services:
       logging_collector: "on"
       log_destination: "stderr"
       log_statement: "all"
+    command: postgres -c 'config_file=/etc/postgresql/postgresql.conf'
+    shm_size: 512mb
     ports:
       - 49153:5432
     volumes:
