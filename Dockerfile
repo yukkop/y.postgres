@@ -104,33 +104,33 @@ RUN if [ "$INSTALL_PLRUST" = "true" ]; then \
 
 # Conditionally modify shared_preload_libraries based on INSTALL_CRON and INSTALL_PLRUST
 RUN if [ "$INSTALL_CRON" = "true" ] || [ "$INSTALL_PLRUST" = "true" ]; then \
-        # Backup the original postgresql.conf
-        cp /etc/postgresql/postgresql.conf /etc/postgresql/postgresql.conf.bak && \
-        # Use awk to add libraries if not present
-        awk -v cron="$INSTALL_CRON" -v plrust="$INSTALL_PLRUST" '
-        BEGIN {
-            FS = "=";
-            OFS = "=";
-        }
-        /^shared_preload_libraries\s*=/ {
-            gsub(/["'\'' ]/, "", $2);
-            split($2, libs, ",");
-            has_cron = 0;
-            has_plrust = 0;
-            for (i in libs) {
-                if (libs[i] == "pg_cron") { has_cron = 1 }
-                if (libs[i] == "plrust") { has_plrust = 1 }
-            }
-            if (cron == "true" && !has_cron) {
-                $2 = "\"" $2 ",pg_cron\"";
-            }
-            if (plrust == "true" && !has_plrust) {
-                $2 = "\"" $2 ",plrust\"";
-            }
-        }
-        { print }
-        ' /etc/postgresql/postgresql.conf.bak > /etc/postgresql/postgresql.conf && \
-        rm /etc/postgresql/postgresql.conf.bak; \
-    fi
+    CONFIG_FILE=/etc/postgresql/postgresql.conf && \
+    extensions="" && \
+    [ "$INSTALL_CRON" = "true" ] && extensions="$extensions pg_cron" && \
+    [ "$INSTALL_PLRUST" = "true" ] && extensions="$extensions plrust" && \
+    extensions=$(echo $extensions | xargs | sed 's/ /,/g') && \
+    if grep -q "^[^#]*shared_preload_libraries" "$CONFIG_FILE"; then \
+      current=$(grep "^[^#]*shared_preload_libraries" "$CONFIG_FILE" | sed -E "s/shared_preload_libraries\s*=\s*'([^']*)'.*/\1/") && \
+      new_libraries="$current" && \
+      # Iterate over each extension
+      for ext in $(echo "$extensions" | tr ',' ' '); do \
+        # Check if ext is already in current
+        echo "$current" | grep -wq "$ext" || { \
+          if [ -z "$new_libraries" ]; then \
+            new_libraries="$ext"; \
+          else \
+            new_libraries="$new_libraries,$ext"; \
+          fi; \
+        } \
+      done && \
+      sed -i "s/^[^#]*shared_preload_libraries\s*=.*/shared_preload_libraries = '${new_libraries}'/" "$CONFIG_FILE"; \
+    else \
+      if grep -q "^#.*shared_preload_libraries" "$CONFIG_FILE"; then \
+        sed -i "s/^#.*shared_preload_libraries\s*=.*/shared_preload_libraries = '${extensions}'/" "$CONFIG_FILE"; \
+      else \
+        echo "shared_preload_libraries = '${extensions}'" >> "$CONFIG_FILE"; \
+      fi; \
+    fi; \
+  fi
 
 EXPOSE 5432
