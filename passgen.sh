@@ -1,67 +1,101 @@
 #!/bin/sh
 
+HELP=0
+LENGTH=16
+INCLUDE_DIGITS=0
+INCLUDE_SPECIAL=0
+
+# Define the character sets
+LETTERS='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+DIGITS='0123456789'
+SPECIAL='@#$%&*?'
+
 while [ "$#" -gt 0 ]; do
-  case $1 in 
+  case "$1" in
     -h|--help|help)
       HELP=1
-      ;;                                   
-    -q|--quiet)
-      QUIET=1
-      ;;                 
-    -b|--build|--rebuild)
-      BUILD=1
+      ;;
+    -l|--length)
+      shift
+      if [ -z "$1" ] || [ "$1" -lt 1 ] 2>/dev/null; then
+        echo "Error: Invalid length specified." >&2
+        exit 1
+      fi
+      LENGTH="$1"
+      ;;
+    -d|--digits)
+      INCLUDE_DIGITS=1
+      ;;
+    -s|--special)
+      INCLUDE_SPECIAL=1
       ;;
     -*)
       echo "Error: Unsupported flag $1" >&2
-      return 1
-      ;;                                  
-    *)  # No more options                          
+      exit 1
+      ;;
+    *)
       break
-      ;;                                                                                                  
+      ;;
   esac
-  shift                     
+  shift
 done
 
 # Display help information
-if [ "$HELP" ]; then
-  printf 'Usage: $(basename "$0") [OPTION]\n'
-  printf 'Options:\n'
-  printf '  -q, --quiet		  return only result\n'
-  printf '  -b, --build, --rebuild  Build or rebuild the container\n'
-  printf '  -h, --help              Display this help and exit\n'
+if [ "$HELP" -eq 1 ]; then
+  echo "Usage: $(basename "$0") [OPTIONS]"
+  echo "Options:"
+  echo "  -l, --length N      Set password length (default: 16)"
+  echo "  -d, --digits        Include at least one digit (0-9)"
+  echo "  -s, --special       Include at least one special character (@#$%&*?)"
+  echo "  -h, --help          Display this help and exit"
   exit 0
 fi
 
-if [ "$BUILD" ]; then
-  build=1
-fi
+# Build the full character class
+CHAR_CLASS="$LETTERS"
+[ "$INCLUDE_DIGITS" -eq 1 ] && CHAR_CLASS="${CHAR_CLASS}${DIGITS}"
+[ "$INCLUDE_SPECIAL" -eq 1 ] && CHAR_CLASS="${CHAR_CLASS}${SPECIAL}"
 
-scriptdir="$(dirname "$(realpath "$0")")/"
-cd "${scriptdir}" || exit 1
-
-# Generate a random password
-password=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 16 | head -n 1)
-
-# Check for docker-compose file and set filename variable
-if [ -f "docker-compose.yml" ]; then
-  filename="docker-compose.yml"
-elif [ -f "docker-compose.yaml" ]; then
-  filename="docker-compose.yaml"
-else
-  echo "No docker-compose file found."
+if [ -z "$CHAR_CLASS" ]; then
+  echo "No valid character set specified." >&2
   exit 1
 fi
 
-# Update POSTGRES_PASSWORD in docker-compose.yml
-sed -i "s/POSTGRES_PASSWORD: .*/POSTGRES_PASSWORD: $password/" "${filename}"
+# Function to pick a random character from a given set
+random_char() {
+    echo "$1" | fold -w1 | shuf | head -n1
+}
 
-if [ "${QUIET}" ]; then
-  printf '%s' "${password}"
-else
-  printf 'Updated POSTGRES_PASSWORD to %s in %s\n' "${password}" "${filename}"
-  if [ -z "${build}" ]; then
-    printf 'Will take effect after container rebuild\n'
-  else
-    sudo docker compose up --build -d	
-  fi
+password=""
+
+# Ensure at least one digit if requested
+if [ "$INCLUDE_DIGITS" -eq 1 ]; then
+    password="${password}$(random_char "$DIGITS")"
 fi
+
+# Ensure at least one special char if requested
+if [ "$INCLUDE_SPECIAL" -eq 1 ]; then
+    password="${password}$(random_char "$SPECIAL")"
+fi
+
+# Calculate how many characters remain to reach the desired length
+chosen_len=$(printf "%s" "$password" | wc -m)
+remaining=$((LENGTH - chosen_len))
+
+if [ "$remaining" -lt 0 ]; then
+  echo "Error: Length is too small for the required sets." >&2
+  exit 1
+fi
+
+# Add the remaining random characters from the full set
+if [ "$remaining" -gt 0 ]; then
+    # Use tr and shuf to pick remaining random characters
+    additional=$(tr -dc "$CHAR_CLASS" < /dev/urandom | head -c "$remaining")
+    password="${password}${additional}"
+fi
+
+# Shuffle the final password to avoid a fixed pattern
+password=$(echo "$password" | fold -w1 | shuf | tr -d '\n')
+
+# Print the generated password
+printf '%s\n' "$password"
