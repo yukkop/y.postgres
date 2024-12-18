@@ -125,3 +125,4 @@ else
 fi
 
 printf '%s\n' "${chosen_port}"
+printf '%s\n' "${chosen_port}" >&2

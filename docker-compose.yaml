@@ -1,26 +1,36 @@
 version: '3.1'
+name: postgresql
 
 services:
-
-  db:
-    image: postgres:15.4
-    restart: always
+  postgresql:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always # maybe you need unless-stop
     environment:
-      POSTGRES_PASSWORD: PxH2Z5zY35FFfXVu
-      logging_collector: "on"
-      log_destination: "stderr"
-      log_statement: "all"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-strongpassword}
+      ### Extensions ###
+      INSTALL_PLRUST: ${INSTALL_PLRUST:-false}
+      INSTALL_CRON: ${INSTALL_CRON:-false}
+      INSTALL_HTTP: ${INSTALL_HTTP:-false}
+      INSTALL_JWT: ${INSTALL_JWT:-false}
+    command: postgres -c 'config_file=/etc/postgresql/postgresql.conf'
+    shm_size: 512mb
     ports:
-      - 49152:5432
+      - "${DB_PORT}:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
       - pg_logs:/var/log/postgresql
+      - rust_target:${PLRUST_WORK_DIR:-/var/lib/postgresql/plrust}
     logging:
       driver: "json-file"
       options:
         max-size: "20m"
         max-file: "10"
+    privileged: true
 
 volumes:
   pg_data: {}
   pg_logs: {}
+  # this is unneccessary if you do not enable INSTALL_PLRUST
+  rust_target: {}

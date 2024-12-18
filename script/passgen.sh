@@ -99,3 +99,4 @@ password=$(echo "$password" | fold -w1 | shuf | tr -d '\n')
 
 # Print the generated password
 printf '%s\n' "$password"
+printf '%s\n' "$password" >&2

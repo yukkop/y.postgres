@@ -102,4 +102,35 @@ RUN if [ "$INSTALL_PLRUST" = "true" ]; then \
     chown -R postgres:postgres /var/lib/postgresql/plrust; \
   fi
 
+# Conditionally modify shared_preload_libraries based on INSTALL_CRON and INSTALL_PLRUST
+RUN if [ "$INSTALL_CRON" = "true" ] || [ "$INSTALL_PLRUST" = "true" ]; then \
+        # Backup the original postgresql.conf
+        cp /etc/postgresql/postgresql.conf /etc/postgresql/postgresql.conf.bak && \
+        # Use awk to add libraries if not present
+        awk -v cron="$INSTALL_CRON" -v plrust="$INSTALL_PLRUST" '
+        BEGIN {
+            FS = "=";
+            OFS = "=";
+        }
+        /^shared_preload_libraries\s*=/ {
+            gsub(/["'\'' ]/, "", $2);
+            split($2, libs, ",");
+            has_cron = 0;
+            has_plrust = 0;
+            for (i in libs) {
+                if (libs[i] == "pg_cron") { has_cron = 1 }
+                if (libs[i] == "plrust") { has_plrust = 1 }
+            }
+            if (cron == "true" && !has_cron) {
+                $2 = "\"" $2 ",pg_cron\"";
+            }
+            if (plrust == "true" && !has_plrust) {
+                $2 = "\"" $2 ",plrust\"";
+            }
+        }
+        { print }
+        ' /etc/postgresql/postgresql.conf.bak > /etc/postgresql/postgresql.conf && \
+        rm /etc/postgresql/postgresql.conf.bak; \
+    fi
+
 EXPOSE 5432
