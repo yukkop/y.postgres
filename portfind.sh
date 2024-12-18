@@ -1,19 +1,29 @@
 #!/bin/sh
 
+HELP=
+QUIET=
+PREFER=
+ERROR_ON_PREFERRED_TAKEN=
+RANDOMIZE=
+
 while [ "$#" -gt 0 ]; do
   case $1 in 
     -h|--help|help)
       HELP=1
-      ;;                                   
-    -q|--quiet)
-      QUIET=1
-      ;;                 
-    -b|--build|--rebuild)
-      BUILD=1
+      ;;
+    -p|--prefer)
+      shift
+      PREFER="$1"
+      ;;
+    -e|--error)
+      ERROR_ON_PREFERRED_TAKEN=1
+      ;;
+    -r|--random)
+      RANDOMIZE=1
       ;;
     -*)
       echo "Error: Unsupported flag $1" >&2
-      return 1
+      exit 1
       ;;                                  
     *)  # No more options                          
       break
@@ -22,74 +32,96 @@ while [ "$#" -gt 0 ]; do
   shift                     
 done
 
-# Display help information
 if [ "${HELP}" ]; then
-  printf 'Usage: %s [NEW_PORT (optional)]\n' "$(basename "$0")"
-  printf '  Change the port in the port forwarding of the db service in docker-compose.yml or docker-compose.yaml\n'
-  printf ''
+  printf 'Usage: %s [OPTIONS]\n' "$(basename "$0")"
+  printf 'Find and print a free TCP port from the ephemeral range (49152-65535).\n\n'
   printf 'Options:\n'
-  printf '  -q, --quiet		  return only result\n'
-  printf '  -b, --build, --rebuild  Build or rebuild the container\n'
-  printf '  -h, --help              Display this help and exit\n'
+  printf '  -p, --prefer PORT        Attempt to use the specified preferred port first.\n'
+  printf '  -e, --error              If the preferred port is taken, exit with an error instead of finding another.\n'
+  printf '  -r, --random             Randomly select a free port instead of picking the first available.\n'
+  printf '  -h, --help               Display this help message.\n'
   exit 0
 fi
 
-# Function to find a free port
-find_free_port() {
-  port=49152 # TODO: more random
+is_port_free() {
+  # Checks if the given port is free (not in use)
+  # Returns 0 if free, 1 if taken.
+  if ss -tulwn | grep -q ":$1 " >/dev/null 2>&1; then
+    return 1
+  else
+    return 0
+  fi
+}
+
+find_first_free_port() {
+  port=49152
   while [ ${port} -le 65535 ]; do
-    if ! ss -tulwn | grep -q ":${port} "; then
-      echo ${port}
-      return
+    if is_port_free $port; then
+      echo $port
+      return 0
     fi
     port=$((port+1))
   done
-  echo "No free port found in the range 49152-65535."
+  echo "No free port found in the range 49152-65535." >&2
   exit 1
 }
 
-new_port="$1"
 
-if [ -z "${new_port}" ]; then
-  if [ ! "${QUIET}" ]; then
-    printf 'finding free port...\n'
-  fi
-  new_port=$(find_free_port)
-else
+generate_random_port() {
+  # Generates a random number between 49152 and 65535 using /dev/urandom
+  # Ensures the port is within the desired range
+  port=$(od -An -N2 -i /dev/urandom | tr -d ' ')
+  port=$(( port % 16384 + 49152 ))
+  echo "$port"
+}
 
-  # Check if port is a number and in the valid range (1-65535)
-  if ! echo "${new_port}" | grep -qE '^[0-9]+$' || [ "${new_port}" -lt 1 ] || [ "${new_port}" -gt 65535 ]; then
-    echo "Invalid port number. Port must be an integer between 1 and 65535."
+find_random_free_port() {
+  # We attempt some random tries. If unsuccessful after 200 tries, just fallback to sequential.
+  tries=0
+  while [ $tries -lt 200 ]; do
+    port=$(generate_random_port)
+    if is_port_free "$port"; then
+      echo "$port"
+      return 0
+    fi
+    tries=$((tries+1))
+  done
+  # Fallback to sequential if random attempts fail
+  find_first_free_port
+}
+
+if [ -n "$PREFER" ]; then
+  # Validate preferred port
+  if ! echo "$PREFER" | grep -qE '^[0-9]+$' || [ "$PREFER" -lt 1 ] || [ "$PREFER" -gt 65535 ]; then
+    echo "Invalid preferred port number. Port must be an integer between 1 and 65535." >&2
     exit 1
   fi
-  
-  # Check if the port is already in use
-  if ss -tulwn | grep -q ":${new_port} "; then
-    echo "Port ${new_port} is already in use."
-    exit 1
-  fi
-fi
 
-# Check for docker-compose file and set filename variable
-if [ -f "docker-compose.yml" ]; then
-  filename="docker-compose.yml"
-elif [ -f "docker-compose.yaml" ]; then
-  filename="docker-compose.yaml"
-else
-  echo "No docker-compose file found."
-  exit 1
-fi
-
-# Update the port forwarding
-sed -i "s/- .*:5432/- ${new_port}:5432/" "${filename}"
-
-if [ "${QUIET}" ]; then
-  printf '%s' "${new_port}"
-else
-  printf 'Updated db service port to %s in %s\n' "${new_port}" "${filename}"
-  if [ -z "${build}" ]; then
-    printf 'Will take effect after container rebuild\n'
+  # Check if preferred port is free
+  if is_port_free "$PREFER"; then
+    # Preferred port is free
+    chosen_port="$PREFER"
   else
-    sudo docker compose up --build -d	
+    # Preferred port is taken
+    if [ "$ERROR_ON_PREFERRED_TAKEN" ]; then
+      echo "Preferred port $PREFER is already in use." >&2
+      exit 1
+    else
+      # Try to find another free port
+      if [ "$RANDOMIZE" ]; then
+        chosen_port=$(find_random_free_port)
+      else
+        chosen_port=$(find_first_free_port)
+      fi
+    fi
+  fi
+else
+  # No preferred port specified
+  if [ "$RANDOMIZE" ]; then
+    chosen_port=$(find_random_free_port)
+  else
+    chosen_port=$(find_first_free_port)
   fi
 fi
+
+printf '%s\n' "${chosen_port}"
